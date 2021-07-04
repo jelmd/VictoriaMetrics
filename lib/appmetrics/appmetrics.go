@@ -12,7 +12,6 @@ import (
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/buildinfo"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/bytesutil"
-	"github.com/VictoriaMetrics/VictoriaMetrics/lib/cgroup"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/flagutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/memory"
 	"github.com/VictoriaMetrics/metrics"
@@ -49,9 +48,6 @@ func writePrometheusMetrics(w io.Writer) {
 	fmt.Fprintf(w, "vm_app_version{version=%q, short_version=%q} 1\n", buildinfo.Version,
 		versionRe.FindString(buildinfo.Version))
 	fmt.Fprintf(w, "vm_allowed_memory_bytes %d\n", memory.Allowed())
-	fmt.Fprintf(w, "vm_available_memory_bytes %d\n", memory.Allowed()+memory.Remaining())
-	fmt.Fprintf(w, "vm_available_cpu_cores %d\n", cgroup.AvailableCPUs())
-	fmt.Fprintf(w, "vm_gogc %d\n", cgroup.GetGOGC())
 
 	// Export start time and uptime in seconds
 	fmt.Fprintf(w, "vm_app_start_timestamp %d\n", startTime.Unix())

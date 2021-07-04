@@ -1422,7 +1422,6 @@ Released at 2021-03-17
   * `histogram_avg(buckets)` - returns the average value for the given buckets.
   * `histogram_stdvar(buckets)` - returns standard variance for the given buckets.
   * `histogram_stddev(buckets)` - returns standard deviation for the given buckets.
-* FEATURE: export `vm_available_memory_bytes` and `vm_available_cpu_cores` metrics, which show the number of available RAM and available CPU cores for VictoriaMetrics apps.
 * FEATURE: export `vm_index_search_duration_seconds` histogram, which can be used for troubleshooting time series search performance.
 * FEATURE: vmagent: add ability to replicate scrape targets among `vmagent` instances in the cluster with `-promscrape.cluster.replicationFactor` command-line flag. See [these docs](https://docs.victoriametrics.com/vmagent.html#scraping-big-number-of-targets).
 * FEATURE: vmagent: accept `scrape_offset` option at `scrape_config`. This option may be useful when scrapes must start at the specified offset of every scrape interval. See [these docs](https://docs.victoriametrics.com/vmagent.html#troubleshooting) for details.
