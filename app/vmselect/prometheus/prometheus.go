@@ -1104,6 +1104,7 @@ func parsePositiveDuration(s string, step int64) (int64, error) {
 //
 // See https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries
 func QueryRangeHandler(startTime time.Time, w http.ResponseWriter, r *http.Request) error {
+	var step int64
 	ct := startTime.UnixNano() / 1e6
 	query := r.FormValue("query")
 	if len(query) == 0 {
@@ -1117,9 +1118,14 @@ func QueryRangeHandler(startTime time.Time, w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return err
 	}
-	step, err := searchutils.GetDuration(r, "step", defaultStep)
-	if err != nil {
-		return err
+	if (strings.HasPrefix(query, "ignore_step:")) {
+		query = strings.TrimPrefix(query, "ignore_step:")
+		step = end - start
+	} else {
+		step, err = searchutils.GetDuration(r, "step", defaultStep)
+		if err != nil {
+			return err
+		}
 	}
 	etf, err := searchutils.GetEnforcedTagFiltersFromRequest(r)
 	if err != nil {
