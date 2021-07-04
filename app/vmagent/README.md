@@ -173,10 +173,16 @@ The following scrape types in [scrape_config](https://prometheus.io/docs/prometh
 * `openstack_sd_configs` - is for scraping OpenStack targets.
   See [openstack_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#openstack_sd_config) for details.
   [OpenStack identity API v3](https://docs.openstack.org/api-ref/identity/v3/) is supported only.
+* `docker_sd_configs` - is for scraping Docker targets.
+  See [docker_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#docker_sd_config) for details.
 * `dockerswarm_sd_configs` - is for scraping Docker Swarm targets.
   See [dockerswarm_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dockerswarm_sd_config) for details.
 * `eureka_sd_configs` - is for scraping targets registered in [Netflix Eureka](https://github.com/Netflix/eureka).
   See [eureka_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#eureka_sd_config) for details.
+* `digitalocean_sd_configs` is for scraping targerts registered in [DigitalOcean](https://www.digitalocean.com/)
+  See [digitalocean_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#digitalocean_sd_config) for details.
+* `http_sd_configs` is for scraping targerts registered in http service discovery.
+  See [http_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#http_sd_config) for details.
 
 Please file feature requests to [our issue tracker](https://github.com/VictoriaMetrics/VictoriaMetrics/issues) if you need other service discovery mechanisms to be supported by `vmagent`.
 
@@ -219,10 +225,10 @@ and also provides the following actions:
 
 The relabeling can be defined in the following places:
 
-* At the `scrape_config -> relabel_configs` section in `-promscrape.config` file. This relabeling is applied to target labels.
-* At the `scrape_config -> metric_relabel_configs` section in `-promscrape.config` file. This relabeling is applied to all the scraped metrics in the given `scrape_config`.
-* At the `-remoteWrite.relabelConfig` file. This relabeling is aplied to all the collected metrics before sending them to remote storage.
-* At the `-remoteWrite.urlRelabelConfig` files. This relabeling is applied to metrics before sending them to the corresponding `-remoteWrite.url`.
+* At the `scrape_config -> relabel_configs` section in `-promscrape.config` file. This relabeling is applied to target labels. This relabeling can be debugged by passing `relabel_debug: true` option to the corresponding `scrape_config` section. In this case `vmagent` logs target labels before and after the relabeling and then drops the logged target.
+* At the `scrape_config -> metric_relabel_configs` section in `-promscrape.config` file. This relabeling is applied to all the scraped metrics in the given `scrape_config`. This relabeling can be debugged by passing `metric_relabel_debug: true` option to the corresponding `scrape_config` section. In this case `vmagent` logs metrics before and after the relabeling and then drops the logged metrics.
+* At the `-remoteWrite.relabelConfig` file. This relabeling is aplied to all the collected metrics before sending them to remote storage. This relabeling can be debugged by passing `-remoteWrite.relabelDebug` command-line option to `vmagent`. In this case `vmagent` logs metrics before and after the relabeling and then drops all the logged metrics instead of sending them to remote storage.
+* At the `-remoteWrite.urlRelabelConfig` files. This relabeling is applied to metrics before sending them to the corresponding `-remoteWrite.url`. This relabeling can be debugged by passing `-remoteWrite.urlRelabelDebug` command-line options to `vmagent`. In this case `vmagent` logs metrics before and after the relabeling and then drops all the logged metrics instead of sending them to the corresponding `-remoteWrite.url`.
 
 You can read more about relabeling in the following articles:
 
@@ -258,7 +264,7 @@ Note that `sample_limit` option doesn't prevent from data push to remote storage
 ## Scraping big number of targets
 
 A single `vmagent` instance can scrape tens of thousands of scrape targets. Sometimes this isn't enough due to limitations on CPU, network, RAM, etc.
-In this case scrape targets can be split among multiple `vmagent` instances (aka `vmagent` horizontal scaling and clustering).
+In this case scrape targets can be split among multiple `vmagent` instances (aka `vmagent` horizontal scaling, sharding and clustering).
 Each `vmagent` instance in the cluster must use identical `-promscrape.config` files with distinct `-promscrape.cluster.memberNum` values.
 The flag value must be in the range `0 ... N-1`, where `N` is the number of `vmagent` instances in the cluster.
 The number of `vmagent` instances in the cluster must be passed to `-promscrape.cluster.membersCount` command-line flag. For example, the following commands
@@ -627,6 +633,8 @@ See the docs at https://docs.victoriametrics.com/vmagent.html .
     	Wait time used by Consul service discovery. Default value is used if not set
   -promscrape.consulSDCheckInterval duration
     	Interval for checking for changes in Consul. This works only if consul_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#consul_sd_config for details (default 30s)
+  -promscrape.digitaloceanSDCheckInterval duration
+        Interval for checking for changes in digital ocean. This works only if digitalocean_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#digitalocean_sd_config for details (default 1m0s)    	
   -promscrape.disableCompression
     	Whether to disable sending 'Accept-Encoding: gzip' request headers to all the scrape targets. This may reduce CPU usage on scrape targets at the cost of higher network bandwidth utilization. It is possible to set 'disable_compression: true' individually per each 'scrape_config' section in '-promscrape.config' for fine grained control
   -promscrape.disableKeepAlive
@@ -649,6 +657,8 @@ See the docs at https://docs.victoriametrics.com/vmagent.html .
     	Interval for checking for changes in 'file_sd_config'. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config for details (default 30s)
   -promscrape.gceSDCheckInterval duration
     	Interval for checking for changes in gce. This works only if gce_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#gce_sd_config for details (default 1m0s)
+  -promscrape.httpSDCheckInterval duration
+        Interval for checking for changes in http service discovery. This works only if http_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#http_sd_config for details (default 1m0s)    	   	
   -promscrape.kubernetes.apiServerTimeout duration
     	How frequently to reload the full state from Kuberntes API server (default 30m0s)
   -promscrape.kubernetesSDCheckInterval duration
@@ -715,12 +725,14 @@ See the docs at https://docs.victoriametrics.com/vmagent.html .
     	Optional proxy URL for writing data to -remoteWrite.url. Supported proxies: http, https, socks5. Example: -remoteWrite.proxyURL=socks5://proxy:1234
     	Supports an array of values separated by comma or specified via multiple flags.
   -remoteWrite.queues int
-    	The number of concurrent queues to each -remoteWrite.url. Set more queues if default number of queues isn't enough for sending high volume of collected data to remote storage (default 4)
+    	The number of concurrent queues to each -remoteWrite.url. Set more queues if default number of queues isn't enough for sending high volume of collected data to remote storage (default 2 * numberOfAvailableCPUs)
   -remoteWrite.rateLimit array
     	Optional rate limit in bytes per second for data sent to -remoteWrite.url. By default the rate limit is disabled. It can be useful for limiting load on remote storage when big amounts of buffered data is sent after temporary unavailability of the remote storage
     	Supports array of values separated by comma or specified via multiple flags.
   -remoteWrite.relabelConfig string
     	Optional path to file with relabel_config entries. These entries are applied to all the metrics before sending them to -remoteWrite.url. See https://docs.victoriametrics.com/vmagent.html#relabeling for details
+  -remoteWrite.relabelDebug
+    	Whether to log metrics before and after relabeling with -remoteWrite.relabelConfig. If the -remoteWrite.relabelDebug is enabled, then the metrics aren't sent to remote storage. This is useful for debugging the relabeling configs
   -remoteWrite.roundDigits array
     	Round metric values to this number of decimal digits after the point before writing them to remote storage. Examples: -remoteWrite.roundDigits=2 would round 1.236 to 1.24, while -remoteWrite.roundDigits=-1 would round 126.78 to 130. By default digits rounding is disabled. Set it to 100 for disabling it for a particular remote storage. This option may be used for improving data compression for the stored metrics
     	Supports array of values separated by comma or specified via multiple flags.
@@ -755,6 +767,9 @@ See the docs at https://docs.victoriametrics.com/vmagent.html .
   -remoteWrite.urlRelabelConfig array
     	Optional path to relabel config for the corresponding -remoteWrite.url
     	Supports an array of values separated by comma or specified via multiple flags.
+  -remoteWrite.urlRelabelDebug array
+    	Whether to log metrics before and after relabeling with -remoteWrite.urlRelabelConfig. If the -remoteWrite.urlRelabelDebug is enabled, then the metrics aren't sent to the corresponding -remoteWrite.url. This is useful for debugging the relabeling configs
+    	Supports array of values separated by comma or specified via multiple flags.
   -sortLabels
     	Whether to sort labels for incoming samples before writing them to all the configured remote storage systems. This may be needed for reducing memory usage at remote storage when the order of labels in incoming samples is random. For example, if m{k1="v1",k2="v2"} may be sent as m{k2="v2",k1="v1"}Enabled sorting for labels can slow down ingestion performance a bit
   -tls

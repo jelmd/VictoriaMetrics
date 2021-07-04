@@ -120,6 +120,13 @@ type Storage struct {
 
 	// The minimum timestamp when composite index search can be used.
 	minTimestampForCompositeIndex int64
+
+	// An inmemory set of deleted metricIDs.
+	//
+	// It is safe to keep the set in memory even for big number of deleted
+	// metricIDs, since it usually requires 1 bit per deleted metricID.
+	deletedMetricIDs           atomic.Value
+	deletedMetricIDsUpdateLock sync.Mutex
 }
 
 // OpenStorage opens storage on the given path with the given retentionMsecs.
@@ -201,12 +208,24 @@ func OpenStorage(path string, retentionMsecs int64, maxHourlySeries, maxDailySer
 	if err := fs.MkdirAllIfNotExist(idbSnapshotsPath); err != nil {
 		return nil, fmt.Errorf("cannot create %q: %w", idbSnapshotsPath, err)
 	}
-	idbCurr, idbPrev, err := openIndexDBTables(idbPath, s.metricIDCache, s.metricNameCache, s.tsidCache, s.minTimestampForCompositeIndex)
+	idbCurr, idbPrev, err := s.openIndexDBTables(idbPath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open indexdb tables at %q: %w", idbPath, err)
 	}
 	idbCurr.SetExtDB(idbPrev)
 	s.idbCurr.Store(idbCurr)
+
+	// Load deleted metricIDs from idbCurr and idbPrev
+	dmisCurr, err := idbCurr.loadDeletedMetricIDs()
+	if err != nil {
+		return nil, fmt.Errorf("cannot load deleted metricIDs for the current indexDB: %w", err)
+	}
+	dmisPrev, err := idbPrev.loadDeletedMetricIDs()
+	if err != nil {
+		return nil, fmt.Errorf("cannot load deleted metricIDs for the previous indexDB: %w", err)
+	}
+	s.setDeletedMetricIDs(dmisCurr)
+	s.updateDeletedMetricIDs(dmisPrev)
 
 	// Load data
 	tablePath := path + "/data"
@@ -224,14 +243,27 @@ func OpenStorage(path string, retentionMsecs int64, maxHourlySeries, maxDailySer
 	return s, nil
 }
 
+func (s *Storage) getDeletedMetricIDs() *uint64set.Set {
+	return s.deletedMetricIDs.Load().(*uint64set.Set)
+}
+
+func (s *Storage) setDeletedMetricIDs(dmis *uint64set.Set) {
+	s.deletedMetricIDs.Store(dmis)
+}
+
+func (s *Storage) updateDeletedMetricIDs(metricIDs *uint64set.Set) {
+	s.deletedMetricIDsUpdateLock.Lock()
+	dmisOld := s.getDeletedMetricIDs()
+	dmisNew := dmisOld.Clone()
+	dmisNew.Union(metricIDs)
+	s.setDeletedMetricIDs(dmisNew)
+	s.deletedMetricIDsUpdateLock.Unlock()
+}
+
 // DebugFlush flushes recently added storage data, so it becomes visible to search.
 func (s *Storage) DebugFlush() {
 	s.tb.flushRawRows()
 	s.idb().tb.DebugFlush()
-}
-
-func (s *Storage) getDeletedMetricIDs() *uint64set.Set {
-	return s.idb().getDeletedMetricIDs()
 }
 
 // CreateSnapshot creates snapshot for s and returns the snapshot name.
@@ -579,7 +611,7 @@ func (s *Storage) mustRotateIndexDB() {
 	// Create new indexdb table.
 	newTableName := nextIndexDBTableName()
 	idbNewPath := s.path + "/indexdb/" + newTableName
-	idbNew, err := openIndexDB(idbNewPath, s.metricIDCache, s.metricNameCache, s.tsidCache, s.minTimestampForCompositeIndex)
+	idbNew, err := openIndexDB(idbNewPath, s)
 	if err != nil {
 		logger.Panicf("FATAL: cannot create new indexDB at %q: %s", idbNewPath, err)
 	}
@@ -599,7 +631,7 @@ func (s *Storage) mustRotateIndexDB() {
 	fs.MustSyncPath(s.path)
 
 	// Flush tsidCache, so idbNew can be populated with fresh data.
-	s.tsidCache.Reset()
+	s.resetAndSaveTSIDCache()
 
 	// Flush dateMetricIDCache, so idbNew can be populated with fresh data.
 	s.dateMetricIDCache.Reset()
@@ -608,6 +640,11 @@ func (s *Storage) mustRotateIndexDB() {
 	// from prev idb remain valid after the rotation.
 
 	// There is no need in resetting nextDayMetricIDs, since it should be automatically reset every day.
+}
+
+func (s *Storage) resetAndSaveTSIDCache() {
+	s.tsidCache.Reset()
+	s.mustSaveCache(s.tsidCache, "MetricName->TSID", "metricName_tsid")
 }
 
 // MustClose closes the storage.
@@ -624,9 +661,12 @@ func (s *Storage) MustClose() {
 	s.idb().MustClose()
 
 	// Save caches.
-	s.mustSaveAndStopCache(s.tsidCache, "MetricName->TSID", "metricName_tsid")
-	s.mustSaveAndStopCache(s.metricIDCache, "MetricID->TSID", "metricID_tsid")
-	s.mustSaveAndStopCache(s.metricNameCache, "MetricID->MetricName", "metricID_metricName")
+	s.mustSaveCache(s.tsidCache, "MetricName->TSID", "metricName_tsid")
+	s.tsidCache.Stop()
+	s.mustSaveCache(s.metricIDCache, "MetricID->TSID", "metricID_tsid")
+	s.metricIDCache.Stop()
+	s.mustSaveCache(s.metricNameCache, "MetricID->MetricName", "metricID_metricName")
+	s.metricNameCache.Stop()
 
 	hmCurr := s.currHourMetricIDs.Load().(*hourMetricIDs)
 	s.mustSaveHourMetricIDs(hmCurr, "curr_hour_metric_ids")
@@ -853,7 +893,10 @@ func (s *Storage) mustLoadCache(info, name string, sizeBytes int) *workingsetcac
 	return c
 }
 
-func (s *Storage) mustSaveAndStopCache(c *workingsetcache.Cache, info, name string) {
+func (s *Storage) mustSaveCache(c *workingsetcache.Cache, info, name string) {
+	saveCacheLock.Lock()
+	defer saveCacheLock.Unlock()
+
 	path := s.cachePath + "/" + name
 	logger.Infof("saving %s cache to %q...", info, path)
 	startTime := time.Now()
@@ -862,10 +905,12 @@ func (s *Storage) mustSaveAndStopCache(c *workingsetcache.Cache, info, name stri
 	}
 	var cs fastcache.Stats
 	c.UpdateStats(&cs)
-	c.Stop()
 	logger.Infof("saved %s cache to %q in %.3f seconds; entriesCount: %d; sizeBytes: %d",
 		info, path, time.Since(startTime).Seconds(), cs.EntriesCount, cs.BytesSize)
 }
+
+// saveCacheLock prevents from data races when multiple concurrent goroutines save the same cache.
+var saveCacheLock sync.Mutex
 
 func nextRetentionDuration(retentionMsecs int64) time.Duration {
 	// Round retentionMsecs to days. This guarantees that per-day inverted index works as expected.
@@ -1898,24 +1943,28 @@ type dateMetricIDCache struct {
 	byDate atomic.Value
 
 	// Contains mutable map protected by mu
-	byDateMutable *byDateMetricIDMap
-	lastSyncTime  uint64
-	mu            sync.Mutex
+	byDateMutable    *byDateMetricIDMap
+	nextSyncDeadline uint64
+	mu               sync.Mutex
 }
 
 func newDateMetricIDCache() *dateMetricIDCache {
 	var dmc dateMetricIDCache
-	dmc.Reset()
+	dmc.resetLocked()
 	return &dmc
 }
 
 func (dmc *dateMetricIDCache) Reset() {
 	dmc.mu.Lock()
+	dmc.resetLocked()
+	dmc.mu.Unlock()
+}
+
+func (dmc *dateMetricIDCache) resetLocked() {
 	// Do not reset syncsCount and resetsCount
 	dmc.byDate.Store(newByDateMetricIDMap())
 	dmc.byDateMutable = newByDateMetricIDMap()
-	dmc.lastSyncTime = fasttime.UnixTimestamp()
-	dmc.mu.Unlock()
+	dmc.nextSyncDeadline = 10 + fasttime.UnixTimestamp()
 
 	atomic.AddUint64(&dmc.resetsCount, 1)
 }
@@ -1948,20 +1997,12 @@ func (dmc *dateMetricIDCache) Has(date, metricID uint64) bool {
 	}
 
 	// Slow path. Check mutable map.
-	currentTime := fasttime.UnixTimestamp()
 	dmc.mu.Lock()
 	v = dmc.byDateMutable.get(date)
 	ok := v.Has(metricID)
-	mustSync := false
-	if currentTime-dmc.lastSyncTime > 10 {
-		mustSync = true
-		dmc.lastSyncTime = currentTime
-	}
+	dmc.syncLockedIfNeeded()
 	dmc.mu.Unlock()
 
-	if mustSync {
-		dmc.sync()
-	}
 	return ok
 }
 
@@ -2000,21 +2041,47 @@ func (dmc *dateMetricIDCache) Set(date, metricID uint64) {
 	dmc.mu.Unlock()
 }
 
-func (dmc *dateMetricIDCache) sync() {
-	dmc.mu.Lock()
+func (dmc *dateMetricIDCache) syncLockedIfNeeded() {
+	currentTime := fasttime.UnixTimestamp()
+	if currentTime >= dmc.nextSyncDeadline {
+		dmc.nextSyncDeadline = currentTime + 10
+		dmc.syncLocked()
+	}
+}
+
+func (dmc *dateMetricIDCache) syncLocked() {
+	if len(dmc.byDateMutable.m) == 0 {
+		// Nothing to sync.
+		return
+	}
 	byDate := dmc.byDate.Load().(*byDateMetricIDMap)
-	for date, e := range dmc.byDateMutable.m {
+	byDateMutable := dmc.byDateMutable
+	for date, e := range byDateMutable.m {
 		v := byDate.get(date)
-		e.v.Union(v)
+		if v == nil {
+			continue
+		}
+		v = v.Clone()
+		v.Union(&e.v)
+		byDateMutable.m[date] = &byDateMetricIDEntry{
+			date: date,
+			v:    *v,
+		}
+	}
+	for date, e := range byDate.m {
+		v := byDateMutable.get(date)
+		if v != nil {
+			continue
+		}
+		byDateMutable.m[date] = e
 	}
 	dmc.byDate.Store(dmc.byDateMutable)
 	dmc.byDateMutable = newByDateMetricIDMap()
-	dmc.mu.Unlock()
 
 	atomic.AddUint64(&dmc.syncsCount, 1)
 
 	if dmc.EntriesCount() > memory.Allowed()/128 {
-		dmc.Reset()
+		dmc.resetLocked()
 	}
 }
 
@@ -2136,7 +2203,7 @@ func (s *Storage) putTSIDToCache(tsid *TSID, metricName []byte) {
 	s.tsidCache.Set(metricName, buf)
 }
 
-func openIndexDBTables(path string, metricIDCache, metricNameCache, tsidCache *workingsetcache.Cache, minTimestampForCompositeIndex int64) (curr, prev *indexDB, err error) {
+func (s *Storage) openIndexDBTables(path string) (curr, prev *indexDB, err error) {
 	if err := fs.MkdirAllIfNotExist(path); err != nil {
 		return nil, nil, fmt.Errorf("cannot create directory %q: %w", path, err)
 	}
@@ -2195,12 +2262,12 @@ func openIndexDBTables(path string, metricIDCache, metricNameCache, tsidCache *w
 	// Open the last two tables.
 	currPath := path + "/" + tableNames[len(tableNames)-1]
 
-	curr, err = openIndexDB(currPath, metricIDCache, metricNameCache, tsidCache, minTimestampForCompositeIndex)
+	curr, err = openIndexDB(currPath, s)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot open curr indexdb table at %q: %w", currPath, err)
 	}
 	prevPath := path + "/" + tableNames[len(tableNames)-2]
-	prev, err = openIndexDB(prevPath, metricIDCache, metricNameCache, tsidCache, minTimestampForCompositeIndex)
+	prev, err = openIndexDB(prevPath, s)
 	if err != nil {
 		curr.MustClose()
 		return nil, nil, fmt.Errorf("cannot open prev indexdb table at %q: %w", prevPath, err)

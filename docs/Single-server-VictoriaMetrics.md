@@ -32,7 +32,7 @@ See [features available for enterprise customers](https://victoriametrics.com/en
 
 ## Case studies and talks
 
-Alphabetically sorted links to case studies:
+Case studies:
 
 * [adidas](https://docs.victoriametrics.com/CaseStudies.html#adidas)
 * [Adsterra](https://docs.victoriametrics.com/CaseStudies.html#adsterra)
@@ -41,13 +41,18 @@ Alphabetically sorted links to case studies:
 * [CERN](https://docs.victoriametrics.com/CaseStudies.html#cern)
 * [COLOPL](https://docs.victoriametrics.com/CaseStudies.html#colopl)
 * [Dreamteam](https://docs.victoriametrics.com/CaseStudies.html#dreamteam)
+* [German Research Center for Artificial Intelligence](https://docs.victoriametrics.com/CaseStudies.html#german-research-center-for-artificial-intelligence)
+* [Groove X](https://docs.victoriametrics.com/CaseStudies.html#groove-x)
 * [Idealo.de](https://docs.victoriametrics.com/CaseStudies.html#idealode)
 * [MHI Vestas Offshore Wind](https://docs.victoriametrics.com/CaseStudies.html#mhi-vestas-offshore-wind)
+* [Sensedia](https://docs.victoriametrics.com/CaseStudies.html#sensedia)
 * [Synthesio](https://docs.victoriametrics.com/CaseStudies.html#synthesio)
 * [Wedos.com](https://docs.victoriametrics.com/CaseStudies.html#wedoscom)
 * [Wix.com](https://docs.victoriametrics.com/CaseStudies.html#wixcom)
 * [Zerodha](https://docs.victoriametrics.com/CaseStudies.html#zerodha)
 * [zhihu](https://docs.victoriametrics.com/CaseStudies.html#zhihu)
+
+See also [articles and slides about VictoriaMetrics from our users](https://docs.victoriametrics.com/Articles.html#third-party-articles-and-slides-about-victoriametrics)
 
 
 ## Prominent features
@@ -98,7 +103,7 @@ Alphabetically sorted links to case studies:
   * [Arbitrary CSV data](#how-to-import-csv-data).
 * Supports metrics' relabeling. See [these docs](#relabeling) for details.
 * Can deal with high cardinality and high churn rate issues using [series limiter](#cardinality-limiter).
-* Ideally works with big amounts of time series data from Kubernetes, IoT sensors, connected cars, industrial telemetry, financial data and various Enterprise workloads.
+* Ideally works with big amounts of time series data from APM, Kubernetes, IoT sensors, connected cars, industrial telemetry, financial data and various Enterprise workloads.
 * Has open source [cluster version](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/cluster).
 * See also technical [Articles about VictoriaMetrics](https://docs.victoriametrics.com/Articles.html).
 
@@ -345,8 +350,11 @@ Currently the following [scrape_config](https://prometheus.io/docs/prometheus/la
 * [consul_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#consul_sd_config)
 * [dns_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dns_sd_config)
 * [openstack_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#openstack_sd_config)
+* [docker_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#docker_sd_config)
 * [dockerswarm_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dockerswarm_sd_config)
 * [eureka_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#eureka_sd_config)
+* [digitalocean_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#digitalocean_sd_config)
+* [http_sd_config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#http_sd_config)
 
 
 Other `*_sd_config` types will be supported in the future.
@@ -1180,7 +1188,7 @@ VictoriaMetrics de-duplicates data points if `-dedup.minScrapeInterval` command-
 is set to positive duration. For example, `-dedup.minScrapeInterval=60s` would de-duplicate data points
 on the same time series if they fall within the same discrete 60s bucket.  The earliest data point will be kept.  In the case of equal timestamps, an arbitrary data point will be kept.
 
-The recommended value for `-dedup.minScrapeInterval` must equal to `scrape_interval` config from Prometheus configs.
+The recommended value for `-dedup.minScrapeInterval` must equal to `scrape_interval` config from Prometheus configs. It is recommended to have a single `scrape_interval` across all the scrape targets. See [this article](https://www.robustperception.io/keep-it-simple-scrape_interval-id) for details.
 
 The de-duplication reduces disk space usage if multiple identically configured [vmagent](https://docs.victoriametrics.com/vmagent.html) or Prometheus instances in HA pair
 write data to the same VictoriaMetrics instance. These vmagent or Prometheus instances must have identical
@@ -1598,7 +1606,7 @@ Pass `-help` to VictoriaMetrics in order to see the list of supported command-li
   -csvTrimTimestamp duration
     	Trim timestamps when importing csv data to this duration. Minimum practical duration is 1ms. Higher duration (i.e. 1s) may be used for reducing disk space usage for timestamp data (default 1ms)
   -dedup.minScrapeInterval duration
-    	Remove superflouos samples from time series if they are located closer to each other than this duration. This may be useful for reducing overhead when multiple identically configured Prometheus instances write data to the same VictoriaMetrics. Deduplication is disabled if the -dedup.minScrapeInterval is 0
+    	Leave only the first sample in every time series per each discrete interval equal to -dedup.minScrapeInterval > 0. See https://docs.victoriametrics.com/#deduplication for details
   -deleteAuthKey string
     	authKey for metrics' deletion via /api/v1/admin/tsdb/delete_series and /tags/delSeries
   -denyQueriesOutsideRetention
@@ -1725,6 +1733,8 @@ Pass `-help` to VictoriaMetrics in order to see the list of supported command-li
     	Wait time used by Consul service discovery. Default value is used if not set
   -promscrape.consulSDCheckInterval duration
     	Interval for checking for changes in Consul. This works only if consul_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#consul_sd_config for details (default 30s)
+  -promscrape.digitaloceanSDCheckInterval duration
+    	Interval for checking for changes in digital ocean. This works only if digitalocean_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#digitalocean_sd_config for details (default 1m0s)
   -promscrape.disableCompression
     	Whether to disable sending 'Accept-Encoding: gzip' request headers to all the scrape targets. This may reduce CPU usage on scrape targets at the cost of higher network bandwidth utilization. It is possible to set 'disable_compression: true' individually per each 'scrape_config' section in '-promscrape.config' for fine grained control
   -promscrape.disableKeepAlive
@@ -1735,6 +1745,8 @@ Pass `-help` to VictoriaMetrics in order to see the list of supported command-li
     	The maximum duration for waiting to perform API requests if more than -promscrape.discovery.concurrency requests are simultaneously performed (default 1m0s)
   -promscrape.dnsSDCheckInterval duration
     	Interval for checking for changes in dns. This works only if dns_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dns_sd_config for details (default 30s)
+  -promscrape.dockerSDCheckInterval duration
+    	Interval for checking for changes in docker. This works only if docker_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#docker_sd_config for details (default 30s)
   -promscrape.dockerswarmSDCheckInterval duration
     	Interval for checking for changes in dockerswarm. This works only if dockerswarm_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#dockerswarm_sd_config for details (default 30s)
   -promscrape.dropOriginalLabels
@@ -1747,6 +1759,8 @@ Pass `-help` to VictoriaMetrics in order to see the list of supported command-li
     	Interval for checking for changes in 'file_sd_config'. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config for details (default 30s)
   -promscrape.gceSDCheckInterval duration
     	Interval for checking for changes in gce. This works only if gce_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#gce_sd_config for details (default 1m0s)
+  -promscrape.httpSDCheckInterval duration
+    	Interval for checking for changes in http endpoint service discovery. This works only if http_sd_configs is configured in '-promscrape.config' file. See https://prometheus.io/docs/prometheus/latest/configuration/configuration/#http_sd_config for details (default 1m0s)
   -promscrape.kubernetes.apiServerTimeout duration
     	How frequently to reload the full state from Kuberntes API server (default 30m0s)
   -promscrape.kubernetesSDCheckInterval duration
@@ -1766,6 +1780,8 @@ Pass `-help` to VictoriaMetrics in order to see the list of supported command-li
     	Whether to suppress scrape errors logging. The last error for each target is always available at '/targets' page even if scrape errors logging is suppressed
   -relabelConfig string
     	Optional path to a file with relabeling rules, which are applied to all the ingested metrics. See https://docs.victoriametrics.com/#relabeling for details
+  -relabelDebug
+    	Whether to log metrics before and after relabeling with -relabelConfig. If the -relabelDebug is enabled, then the metrics aren't sent to storage. This is useful for debugging the relabeling configs
   -retentionPeriod value
     	Data with timestamps outside the retentionPeriod is automatically deleted
     	The following optional suffixes are supported: h (hour), d (day), w (week), y (year). If suffix isn't set, then the duration is counted in months (default 1)
@@ -1782,7 +1798,7 @@ Pass `-help` to VictoriaMetrics in order to see the list of supported command-li
   -search.maxExportDuration duration
     	The maximum duration for /api/v1/export call (default 720h0m0s)
   -search.maxLookback duration
-    	Synonim to -search.lookback-delta from Prometheus. The value is dynamically detected from interval between time series datapoints if not set. It can be overridden on per-query basis via max_lookback arg. See also '-search.maxStalenessInterval' flag, which has the same meaining due to historical reasons
+    	Synonym to -search.lookback-delta from Prometheus. The value is dynamically detected from interval between time series datapoints if not set. It can be overridden on per-query basis via max_lookback arg. See also '-search.maxStalenessInterval' flag, which has the same meaining due to historical reasons
   -search.maxPointsPerTimeseries int
     	The maximum points per a single timeseries returned from /api/v1/query_range. This option doesn't limit the number of scanned raw samples in the database. The main purpose of this option is to limit the number of per-series points returned to graphing UI such as Grafana. There is no sense in setting this limit to values bigger than the horizontal resolution of the graph (default 30000)
   -search.maxQueryDuration duration
