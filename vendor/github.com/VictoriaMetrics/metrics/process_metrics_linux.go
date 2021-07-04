@@ -72,16 +72,27 @@ func writeProcessMetrics(w io.Writer) {
 
 	utime := float64(p.Utime) / userHZ
 	stime := float64(p.Stime) / userHZ
-	fmt.Fprintf(w, "process_cpu_seconds_system_total %g\n", stime)
-	fmt.Fprintf(w, "process_cpu_seconds_total %g\n", utime+stime)
-	fmt.Fprintf(w, "process_cpu_seconds_user_total %g\n", utime)
-	fmt.Fprintf(w, "process_major_pagefaults_total %d\n", p.Majflt)
-	fmt.Fprintf(w, "process_minor_pagefaults_total %d\n", p.Minflt)
-	fmt.Fprintf(w, "process_num_threads %d\n", p.NumThreads)
-	fmt.Fprintf(w, "process_resident_memory_bytes %d\n", p.Rss*4096)
+	cutime := float64(p.Cutime) / userHZ
+	cstime := float64(p.Cstime) / userHZ
+	fmt.Fprintf(w, "process_minor_pagefaults %d\n", p.Minflt)
+	fmt.Fprintf(w, "process_major_pagefaults %d\n", p.Majflt)
+	fmt.Fprintf(w, "process_children_minor_pagefaults %d\n", p.Cminflt)
+	fmt.Fprintf(w, "process_children_major_pagefaults %d\n", p.Cmajflt)
+
+	fmt.Fprintf(w, "process_user_cpu_seconds %g\n", utime)
+	fmt.Fprintf(w, "process_system_cpu_seconds %g\n", stime)
+	fmt.Fprintf(w, "process_total_cpu_seconds %g\n", utime + stime)
+	fmt.Fprintf(w, "process_children_user_cpu_seconds %g\n", cutime)
+	fmt.Fprintf(w, "process_children_system_cpu_seconds %g\n", cstime)
+	fmt.Fprintf(w, "process_children_total_cpu_seconds %g\n", cutime + cstime)
+
+	fmt.Fprintf(w, "process_threads_total %d\n", p.NumThreads)
+
 	fmt.Fprintf(w, "process_start_time_seconds %d\n", startTimeSeconds)
-	fmt.Fprintf(w, "process_virtual_memory_bytes %d\n", p.Vsize)
-	writeProcessMemMetrics(w)
+
+	fmt.Fprintf(w, "process_virtual_memory_bytes %d\n", p.Vsize << 10)
+	fmt.Fprintf(w, "process_resident_memory_bytes %d\n", p.Rss << 10)
+	//writeProcessMemMetrics(w)		// useless
 	writeIOMetrics(w)
 }
 
@@ -123,15 +134,16 @@ func writeIOMetrics(w io.Writer) {
 			writeBytes = getInt(s)
 		}
 	}
-	fmt.Fprintf(w, "process_io_read_bytes_total %d\n", rchar)
-	fmt.Fprintf(w, "process_io_written_bytes_total %d\n", wchar)
-	fmt.Fprintf(w, "process_io_read_syscalls_total %d\n", syscr)
-	fmt.Fprintf(w, "process_io_write_syscalls_total %d\n", syscw)
-	fmt.Fprintf(w, "process_io_storage_read_bytes_total %d\n", readBytes)
-	fmt.Fprintf(w, "process_io_storage_written_bytes_total %d\n", writeBytes)
+	fmt.Fprintf(w, "process_io_read_bytes %d\n", rchar)
+	fmt.Fprintf(w, "process_io_write_bytes %d\n", wchar)
+	fmt.Fprintf(w, "process_io_read_syscalls %d\n", syscr)
+	fmt.Fprintf(w, "process_io_write_syscalls %d\n", syscw)
+	fmt.Fprintf(w, "process_io_read_storage_bytes %d\n", readBytes)
+	fmt.Fprintf(w, "process_io_write_storage_bytes %d\n", writeBytes)
 }
 
 var startTimeSeconds = time.Now().Unix()
+var maxOpenFDs uint64 = 0
 
 // writeFDMetrics writes process_max_fds and process_open_fds metrics to w.
 func writeFDMetrics(w io.Writer) {
@@ -140,12 +152,19 @@ func writeFDMetrics(w io.Writer) {
 		log.Printf("ERROR: metrics: cannot determine open file descriptors count: %s", err)
 		return
 	}
-	maxOpenFDs, err := getMaxFilesLimit("/proc/self/limits")
-	if err != nil {
-		log.Printf("ERROR: metrics: cannot determine the limit on open file descritors: %s", err)
-		return
+	if (maxOpenFDs == 0) {
+		maxOpenFDs, err = getMaxFilesLimit("/proc/self/limits")
+		if err != nil {
+			log.Printf("ERROR: cannot determine the limit on open file descritors: %s", err)
+			maxOpenFDs = 0	// try again
+			return
+		}
 	}
-	fmt.Fprintf(w, "process_max_fds %d\n", maxOpenFDs)
+	if (maxOpenFDs == 1) {
+		fmt.Fprint(w, "process_max_fds -1\n")
+	} else {
+		fmt.Fprintf(w, "process_max_fds %d\n", maxOpenFDs)
+	}
 	fmt.Fprintf(w, "process_open_fds %d\n", totalOpenFDs)
 }
 
@@ -188,7 +207,7 @@ func getMaxFilesLimit(path string) (uint64, error) {
 		}
 		text = text[:n]
 		if text == "unlimited" {
-			return 1<<64 - 1, nil
+			return 1, nil	// vmdb would not work with such a low limit ;-)
 		}
 		limit, err := strconv.ParseUint(text, 10, 64)
 		if err != nil {

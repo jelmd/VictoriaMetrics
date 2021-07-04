@@ -1395,12 +1395,6 @@ Released at 2021-03-30
 Released at 2021-03-29
 
 * FEATURE: optimize query performance by up to 10x on systems with many CPU cores. See [this tweet](https://twitter.com/MetricsVictoria/status/1375064484860067840).
-* FEATURE: add the following metrics at `/metrics` page for every VictoraMetrics app:
-  * `process_resident_memory_anon_bytes` - RSS share for memory allocated by the process itself.  This share cannot be freed by the OS, so it must be taken into account by OOM killer.
-  * `process_resident_memory_file_bytes` - RSS share for page cache memory (aka memory-mapped files). This share can be freed by the OS at any time, so it must be ignored by OOM killer.
-  * `process_resident_memory_shared_bytes` - RSS share for memory shared with other processes (aka shared memory). This share can be freed by the OS at any time, so it must be ignored by OOM killer.
-  * `process_resident_memory_peak_bytes` - peak RSS usage for the process.
-  * `process_virtual_memory_peak_bytes` - peak virtual memory usage for the process.
 * FEATURE: accept and enforce `extra_label=<label_name>=<label_value>` query arg at [Graphite APIs](https://docs.victoriametrics.com/#graphite-api-usage).
 * FEATURE: use InfluxDB field as metric name if measurement is empty and `-influxSkipSingleField` command-line is set. See [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/1139).
 * FEATURE: vmagent: add `-promscrape.consul.waitTime` command-line flag for tuning the maximum wait time for Consul service discovery. See [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/1144).
@@ -1457,12 +1451,12 @@ Released at 2021-03-02
 * FEATURE: add `sign(q)` and `clamp(q, min, max)` functions, which are planned to be added in [the upcoming Prometheus release](https://twitter.com/roidelapluie/status/1363428376162295811) . The `last_over_time(m[d])` function is already supported in [MetricsQL](https://docs.victoriametrics.com/MetricsQL.html).
 * FEATURE: vmagent: add `scrape_align_interval` config option, which can be used for aligning scrapes to the beginning of the configured interval. See [these docs](https://docs.victoriametrics.com/vmagent.html#troubleshooting) for details.
 * FEATURE: expose io-related metrics at `/metrics` page for every VictoriaMetrics component:
-  * `process_io_read_bytes_total` - the number of bytes read via io syscalls such as read and pread
-  * `process_io_written_bytes_total` - the number of bytes written via io syscalls such as write and pwrite
-  * `process_io_read_syscalls_total` - the number of read syscalls such as read and pread
-  * `process_io_write_syscalls_total` - the number of write syscalls such as write and pwrite
-  * `process_io_storage_read_bytes_total` - the number of bytes read from storage layer
-  * `process_io_storage_written_bytes_total` - the number of bytes written to storage layer
+  * `process_io_read_bytes` - the number of bytes read via io syscalls such as read and pread
+  * `process_io_write_bytes` - the number of bytes written via io syscalls such as write and pwrite
+  * `process_io_read_syscalls` - the number of read syscalls such as read and pread
+  * `process_io_write_syscalls` - the number of write syscalls such as write and pwrite
+  * `process_io_read_storage_bytes` - the number of bytes read from storage layer
+  * `process_io_write_storage_bytes` - the number of bytes written to storage layer
 * FEATURE: vmagent: add ability to spread scrape targets among multiple `vmagent` instances. See [these docs](https://docs.victoriametrics.com/vmagent.html#scraping-big-number-of-targets) and [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/1084) for details.
 * FEATURE: vmagent: use watch API for Kubernetes service discovery. This should reduce load on Kubernetes API server when it tracks big number of objects (for example, 10K pods). This should also reduce the time needed for k8s targets discovery. See [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/1057) for details.
 * FEATURE: vmagent: export `vm_promscrape_target_relabel_duration_seconds` metric, which can be used for monitoring the time spend on relabeling for discovered targets.
