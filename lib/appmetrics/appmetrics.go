@@ -57,8 +57,6 @@ func writePrometheusMetrics(w io.Writer) {
 
 	metrics.WriteGaugeUint64(w, fmt.Sprintf("vm_app_version{version=%q, short_version=%q}", buildinfo.Version, buildinfo.ShortVersion()), 1)
 	metrics.WriteGaugeUint64(w, "vm_allowed_memory_bytes", uint64(memory.Allowed()))
-	metrics.WriteGaugeUint64(w, "vm_available_memory_bytes", uint64(memory.Allowed()+memory.Remaining()))
-	metrics.WriteGaugeUint64(w, "vm_available_cpu_cores", uint64(cgroup.AvailableCPUs()))
 	metrics.WriteGaugeUint64(w, "vm_gogc", uint64(cgroup.GetGOGC()))
 
 	// Export start time and uptime in seconds
