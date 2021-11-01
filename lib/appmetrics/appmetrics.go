@@ -56,12 +56,8 @@ func writePrometheusMetrics(w io.Writer) {
 	metrics.WriteFDMetrics(w)
 
 	metrics.WriteGaugeUint64(w, fmt.Sprintf("vm_app_version{version=%q, short_version=%q}", buildinfo.Version, buildinfo.ShortVersion()), 1)
-	metrics.WriteGaugeUint64(w, "vm_allowed_memory_bytes", uint64(memory.Allowed()))
-	metrics.WriteGaugeUint64(w, "vm_gogc", uint64(cgroup.GetGOGC()))
-
-	// Export start time and uptime in seconds
-	metrics.WriteGaugeUint64(w, "vm_app_start_timestamp", uint64(startTime.Unix()))
-	metrics.WriteGaugeUint64(w, "vm_app_uptime_seconds", uint64(time.Since(startTime).Seconds()))
+	metrics.WriteGaugeUint64(w, "vm_cache_capacity_bytes", uint64(memory.Allowed()))
+	metrics.WriteGaugeUint64(w, "go_gc_trigger_percent", uint64(cgroup.GetGOGC()))
 
 	// Export flags as metrics.
 	isSetMap := make(map[string]bool)
@@ -83,5 +79,3 @@ func writePrometheusMetrics(w io.Writer) {
 		fmt.Fprintf(w, "flag{name=%q, value=%q, is_set=%q} 1\n", f.Name, value, isSet)
 	})
 }
-
-var startTime = time.Now()
