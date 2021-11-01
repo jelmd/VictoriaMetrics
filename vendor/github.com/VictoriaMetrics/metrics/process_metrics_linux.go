@@ -90,8 +90,8 @@ func writeProcessMetrics(w io.Writer) {
 
 	fmt.Fprintf(w, "process_start_time_seconds %d\n", startTimeSeconds)
 
-	fmt.Fprintf(w, "process_virtual_memory_bytes %d\n", p.Vsize << 10)
-	fmt.Fprintf(w, "process_resident_memory_bytes %d\n", p.Rss << 10)
+	fmt.Fprintf(w, "process_virtual_memory_bytes %d\n", p.Vsize << 12)
+	fmt.Fprintf(w, "process_resident_memory_bytes %d\n", p.Rss << 12)
 	//writeProcessMemMetrics(w)		// useless
 	writeIOMetrics(w)
 }
