@@ -231,9 +231,8 @@ func loadStaticConfigs(path string) ([]StaticConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot read `static_configs` from %q: %w", path, err)
 	}
-	data = envtemplate.Replace(data)
 	var stcs []StaticConfig
-	if err := yaml.UnmarshalStrict(data, &stcs); err != nil {
+	if err := unmarshalMaybeStrict(data, &stcs); err != nil {
 		return nil, fmt.Errorf("cannot unmarshal `static_configs` from %q: %w", path, err)
 	}
 	return stcs, nil
@@ -272,7 +271,6 @@ func loadScrapeConfigFiles(baseDir string, scrapeConfigFiles []string) ([]Scrape
 			if err != nil {
 				return nil, nil, fmt.Errorf("cannot load %q: %w", path, err)
 			}
-			data = envtemplate.Replace(data)
 			var scs []ScrapeConfig
 			if err = yaml.UnmarshalStrict(data, &scs); err != nil {
 				return nil, nil, fmt.Errorf("cannot parse %q: %w", path, err)
