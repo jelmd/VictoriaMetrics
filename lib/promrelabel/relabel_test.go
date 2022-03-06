@@ -91,7 +91,7 @@ func TestLabelsToString(t *testing.T) {
 func TestParsedRelabelConfigsApplyDebug(t *testing.T) {
 	f := func(config, metric string, dssExpected []DebugStep) {
 		t.Helper()
-		pcs, err := ParseRelabelConfigsData([]byte(config))
+		pcs, err := ParseRelabelConfigsData([]byte(config), false)
 		if err != nil {
 			t.Fatalf("cannot parse %q: %s", config, err)
 		}
@@ -166,12 +166,12 @@ func TestParsedRelabelConfigsApplyDebug(t *testing.T) {
 func TestParsedRelabelConfigsApply(t *testing.T) {
 	f := func(config, metric string, isFinalize bool, resultExpected string) {
 		t.Helper()
-		pcs, err := ParseRelabelConfigsData([]byte(config))
+		pcs, err := ParseRelabelConfigsData([]byte(config), false)
 		if err != nil {
 			t.Fatalf("cannot parse %q: %s", config, err)
 		}
 		labels := promutil.MustNewLabelsFromString(metric)
-		resultLabels := pcs.Apply(labels.GetLabels(), 0)
+		resultLabels := pcs.Apply(labels.GetLabels(), 0, 0)
 		if isFinalize {
 			resultLabels = FinalizeLabels(resultLabels[:0], resultLabels)
 		}
@@ -1039,7 +1039,7 @@ func newTestRegexRelabelConfig(pattern string) *parsedRelabelConfig {
 func TestParsedRelabelConfigsApplyForMultipleSeries(t *testing.T) {
 	f := func(config string, metrics []string, resultExpected []string) {
 		t.Helper()
-		pcs, err := ParseRelabelConfigsData([]byte(config))
+		pcs, err := ParseRelabelConfigsData([]byte(config), false)
 		if err != nil {
 			t.Fatalf("cannot parse %q: %s", config, err)
 		}
@@ -1048,7 +1048,7 @@ func TestParsedRelabelConfigsApplyForMultipleSeries(t *testing.T) {
 		var labels []prompb.Label
 		for _, metric := range metrics {
 			labels = append(labels, promutil.MustNewLabelsFromString(metric).GetLabels()...)
-			resultLabels := pcs.Apply(labels, totalLabels)
+			resultLabels := pcs.Apply(labels, totalLabels, 0)
 			SortLabels(resultLabels)
 			totalLabels += len(resultLabels)
 			labels = resultLabels
@@ -1073,7 +1073,7 @@ func TestParsedRelabelConfigsApplyForMultipleSeries(t *testing.T) {
 	// drops one of series
 	f(`
 - action: drop
-  if: '{__name__!~"smth"}' 
+  if: '{__name__!~"smth"}'
 `, []string{`smth`, `notthis`}, []string{`smth`})
 	f(`
 - action: drop

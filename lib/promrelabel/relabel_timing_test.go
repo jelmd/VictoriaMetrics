@@ -415,7 +415,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				if len(labels) != 0 {
 					panic(fmt.Errorf("BUG: expecting empty labels"))
 				}
@@ -438,7 +438,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -475,7 +475,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -511,7 +511,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 2 {
@@ -549,7 +549,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -587,7 +587,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -624,7 +624,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -661,7 +661,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 0 {
@@ -686,7 +686,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 0 {
@@ -711,7 +711,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 0 {
@@ -736,7 +736,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -773,7 +773,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -809,7 +809,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -845,7 +845,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 1 {
@@ -875,7 +875,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 1 {
@@ -905,7 +905,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 1 {
@@ -935,7 +935,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 0 {
@@ -959,7 +959,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 1 {
@@ -989,7 +989,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 1 {
@@ -1019,7 +1019,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 1 {
@@ -1048,7 +1048,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 1 {
@@ -1077,7 +1077,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 2 {
@@ -1112,7 +1112,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != 2 {
@@ -1150,7 +1150,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 			var labels []prompb.Label
 			for pb.Next() {
 				labels = append(labels[:0], labelsOrig...)
-				labels = pcs.Apply(labels, 0)
+				labels = pcs.Apply(labels, 0, 0)
 				labels = FinalizeLabels(labels[:0], labels)
 				SortLabels(labels)
 				if len(labels) != len(labelsOrig) {
@@ -1174,7 +1174,7 @@ func BenchmarkApplyRelabelConfigs(b *testing.B) {
 }
 
 func mustParseRelabelConfigs(config string) *ParsedConfigs {
-	pcs, err := ParseRelabelConfigsData([]byte(config))
+	pcs, err := ParseRelabelConfigsData([]byte(config), false)
 	if err != nil {
 		panic(fmt.Errorf("unexpected error: %w", err))
 	}

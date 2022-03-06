@@ -41,7 +41,7 @@ func writeRelabelDebug(w io.Writer, isTargetRelabel bool, targetID, metric, rela
 		WriteRelabelDebugSteps(w, targetURL, targetID, format, nil, metric, relabelConfigs, err)
 		return
 	}
-	pcs, err := ParseRelabelConfigsData([]byte(relabelConfigs))
+	pcs, err := ParseRelabelConfigsData([]byte(relabelConfigs), false)
 	if err != nil {
 		err = fmt.Errorf("cannot parse relabel configs: %w", err)
 		WriteRelabelDebugSteps(w, targetURL, targetID, format, nil, metric, relabelConfigs, err)

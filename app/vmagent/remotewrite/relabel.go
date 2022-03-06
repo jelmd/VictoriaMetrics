@@ -25,9 +25,14 @@ var (
 		"to all the metrics before sending them to -remoteWrite.url. See also -remoteWrite.urlRelabelConfig. "+
 		"The path can point either to local file or to http url. "+
 		"See https://docs.victoriametrics.com/victoriametrics/relabeling/")
+	relabelDebugGlobal = flag.Bool("remoteWrite.relabelDebug", false, "Whether to log metrics before and after relabeling with -remoteWrite.relabelConfig. "+
+		"If the -remoteWrite.relabelDebug is enabled, then the metrics aren't sent to remote storage. This is useful for debugging the relabeling configs")
 	relabelConfigPaths = flagutil.NewArrayString("remoteWrite.urlRelabelConfig", "Optional path to relabel configs for the corresponding -remoteWrite.url. "+
 		"See also -remoteWrite.relabelConfig. The path can point either to local file or to http url. "+
 		"See https://docs.victoriametrics.com/victoriametrics/relabeling/")
+	relabelDebug = flagutil.NewArrayBool("remoteWrite.urlRelabelDebug", "Whether to log metrics before and after relabeling with -remoteWrite.urlRelabelConfig. "+
+		"If the -remoteWrite.urlRelabelDebug is enabled, then the metrics aren't sent to the corresponding -remoteWrite.url. "+
+		"This is useful for debugging the relabeling configs")
 
 	usePromCompatibleNaming = flag.Bool("usePromCompatibleNaming", false, "Whether to replace characters unsupported by Prometheus with underscores "+
 		"in the ingested metric names and label names. For example, foo.bar{a.b='c'} is transformed into foo_bar{a_b='c'} during data ingestion if this flag is set. "+
@@ -131,7 +136,7 @@ func reloadRelabelConfigs() {
 func loadRelabelConfigs() (*relabelConfigs, error) {
 	var rcs relabelConfigs
 	if *relabelConfigPathGlobal != "" {
-		global, rawCfg, err := promrelabel.LoadRelabelConfigs(*relabelConfigPathGlobal)
+		global, rawCfg, err := promrelabel.LoadRelabelConfigs(*relabelConfigPathGlobal, *relabelDebugGlobal)
 		if err != nil {
 			return nil, fmt.Errorf("cannot load -remoteWrite.relabelConfig=%q: %w", *relabelConfigPathGlobal, err)
 		}
@@ -151,7 +156,7 @@ func loadRelabelConfigs() (*relabelConfigs, error) {
 			urlRelabelCfgs = append(urlRelabelCfgs, nil)
 			continue
 		}
-		prc, rawCfg, err := promrelabel.LoadRelabelConfigs(path)
+		prc, rawCfg, err := promrelabel.LoadRelabelConfigs(path, relabelDebug.GetOptionalArg(i))
 		if err != nil {
 			return nil, fmt.Errorf("cannot load relabel configs from -remoteWrite.urlRelabelConfig=%q: %w", path, err)
 		}
@@ -211,7 +216,7 @@ func (rctx *relabelCtx) applyRelabeling(tss []prompb.TimeSeries, pcs *promrelabe
 		ts := &tss[i]
 		labelsLen := len(labels)
 		labels = append(labels, ts.Labels...)
-		labels = pcs.Apply(labels, labelsLen)
+		labels = pcs.Apply(labels, labelsLen, 0)
 		labels = promrelabel.FinalizeLabels(labels[:labelsLen], labels[labelsLen:])
 		if len(labels) == labelsLen {
 			// Drop the current time series, since relabeling removed all the labels.

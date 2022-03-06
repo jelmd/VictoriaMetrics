@@ -206,7 +206,7 @@ func (a Alert) applyRelabelingIfNeeded(relabelCfg *promrelabel.ParsedConfigs) []
 		})
 	}
 	if relabelCfg != nil {
-		labels = relabelCfg.Apply(labels, 0)
+		labels = relabelCfg.Apply(labels, 0, 0)
 	}
 	promrelabel.SortLabels(labels)
 	return labels

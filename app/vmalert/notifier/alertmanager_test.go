@@ -135,7 +135,7 @@ func TestAlertManager_Send(t *testing.T) {
 - target_label: "env"
   replacement: "prod"
   if: '{tenant="1"}'
-`))
+`), false)
 	if err != nil {
 		t.Fatalf("unexpected error when parse relabeling config: %s", err)
 	}

@@ -166,7 +166,7 @@ func (cw *configWatcher) start() error {
 	if len(cw.cfg.StaticConfigs) > 0 {
 		var targets []Target
 		for i, cfg := range cw.cfg.StaticConfigs {
-			alertRelabelConfig, _ := promrelabel.ParseRelabelConfigs(cw.cfg.StaticConfigs[i].AlertRelabelConfigs)
+			alertRelabelConfig, _ := promrelabel.ParseRelabelConfigs(cw.cfg.StaticConfigs[i].AlertRelabelConfigs, false)
 			httpCfg := mergeHTTPClientConfigs(cw.cfg.HTTPClientConfig, cfg.HTTPClientConfig)
 			for _, target := range cfg.Targets {
 				address, labels, err := parseLabels(target, nil, cw.cfg)
@@ -191,7 +191,7 @@ func (cw *configWatcher) start() error {
 			var labels [][]*promutil.Labels
 			var alertRelabelConfigs []*promrelabel.ParsedConfigs
 			for i := range cw.cfg.ConsulSDConfigs {
-				alertRelabelConfig, _ := promrelabel.ParseRelabelConfigs(cw.cfg.ConsulSDConfigs[i].AlertRelabelConfigs)
+				alertRelabelConfig, _ := promrelabel.ParseRelabelConfigs(cw.cfg.ConsulSDConfigs[i].AlertRelabelConfigs, false)
 				sdc := &cw.cfg.ConsulSDConfigs[i]
 				targetLabels, err := sdc.GetLabels(cw.cfg.baseDir)
 				if err != nil {
@@ -212,7 +212,7 @@ func (cw *configWatcher) start() error {
 			var labels [][]*promutil.Labels
 			var alertRelabelConfigs []*promrelabel.ParsedConfigs
 			for i := range cw.cfg.DNSSDConfigs {
-				alertRelabelConfig, _ := promrelabel.ParseRelabelConfigs(cw.cfg.DNSSDConfigs[i].AlertRelabelConfigs)
+				alertRelabelConfig, _ := promrelabel.ParseRelabelConfigs(cw.cfg.DNSSDConfigs[i].AlertRelabelConfigs, false)
 				sdc := &cw.cfg.DNSSDConfigs[i]
 				targetLabels, err := sdc.GetLabels(cw.cfg.baseDir)
 				if err != nil {

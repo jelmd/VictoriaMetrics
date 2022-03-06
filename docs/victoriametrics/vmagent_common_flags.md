@@ -469,6 +469,10 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/vmagent/ .
      Empty values are set to default value.
   -remoteWrite.relabelConfig string
      Optional path to file with relabeling configs, which are applied to all the metrics before sending them to -remoteWrite.url. See also -remoteWrite.urlRelabelConfig. The path can point either to local file or to http url. See https://docs.victoriametrics.com/victoriametrics/relabeling/
+  -remoteWrite.relabelDebug
+     Whether to log metrics before and after relabeling with -remoteWrite.relabelConfig. Related metrics aren't sent to storage. This is useful for debugging the relabeling configs.
+  -remoteWrite.urlRelabelDebug
+     Whether to log metrics before and after relabeling with -remoteWrite.urlRelabelConfig. Related metrics aren't sent to storage. This is useful for debugging the relabeling configs.
   -remoteWrite.retryMaxInterval array
      The maximum delay between retry attempts to send a block of data to the corresponding -remoteWrite.url.  The delay doubles with each retry until this maximum is reached, after which it remains constant. See also -remoteWrite.retryMinInterval (default 1m0s)
      Supports array of values separated by comma or specified via multiple flags.
