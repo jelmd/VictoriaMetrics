@@ -3,18 +3,12 @@ PKG_PREFIX := github.com/VictoriaMetrics/VictoriaMetrics
 MAKE_CONCURRENCY ?= $(shell getconf _NPROCESSORS_ONLN)
 MAKE_PARALLEL := $(MAKE) -j $(MAKE_CONCURRENCY)
 DATEINFO_TAG ?= $(shell date -u +'%Y%m%d-%H%M%S')
-BUILDINFO_TAG ?= $(shell echo $$(git describe --long --all | tr '/' '-')$$( \
-	      git diff-index --quiet HEAD -- || echo '-dirty-'$$(git diff-index -u HEAD | openssl sha1 | cut -d' ' -f2 | cut -c 1-8)))
-
-PKG_TAG ?= $(shell git tag -l --points-at HEAD)
-ifeq ($(PKG_TAG),)
-PKG_TAG := $(BUILDINFO_TAG)
-endif
-
-EXTRA_DOCKER_TAG_SUFFIX ?=
+PKG_TAG ?= $(shell awk '/GH_TAGNAME/ { print $$3 }' ports/OpenBSD/VictoriaMetrics/Makefile )
+GIT_HASH := $(shell [ -f .commit ] && cat .commit || echo $(PKG_TAG) )
 EXTRA_GO_BUILD_TAGS ?=
 
-GO_BUILDINFO = -X '$(PKG_PREFIX)/lib/buildinfo.Version=$(APP_NAME)-$(DATEINFO_TAG)-$(BUILDINFO_TAG)'
+GO_BUILDINFO = -X '$(PKG_PREFIX)/lib/buildinfo.Version=$(APP_NAME)-$(PKG_TAG) ($(GIT_HASH))'
+BUILDFLAGS ?= -trimpath
 TAR_OWNERSHIP ?= --owner=1000 --group=1000
 
 GOLANGCI_LINT_VERSION := 2.9.0
@@ -501,16 +495,16 @@ vendor-update:
 	go mod vendor
 
 app-local:
-	CGO_ENABLED=1 go build $(RACE) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)$(RACE) $(PKG_PREFIX)/app/$(APP_NAME)
+	CGO_ENABLED=1 go build $(RACE) $(BUILDFLAGS) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)$(RACE) $(PKG_PREFIX)/app/$(APP_NAME)
 
 app-local-pure:
-	CGO_ENABLED=0 go build $(RACE) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)-pure$(RACE) $(PKG_PREFIX)/app/$(APP_NAME)
+	CGO_ENABLED=0 go build $(RACE) $(BUILDFLAGS) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)-pure$(RACE) $(PKG_PREFIX)/app/$(APP_NAME)
 
 app-local-goos-goarch:
-	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(RACE) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)-$(GOOS)-$(GOARCH)$(RACE) $(PKG_PREFIX)/app/$(APP_NAME)
+	CGO_ENABLED=$(CGO_ENABLED) GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(RACE) $(BUILDFLAGS) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)-$(GOOS)-$(GOARCH)$(RACE) $(PKG_PREFIX)/app/$(APP_NAME)
 
 app-local-windows-goarch:
-	CGO_ENABLED=0 GOOS=windows GOARCH=$(GOARCH) go build $(RACE) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)-windows-$(GOARCH)$(RACE).exe $(PKG_PREFIX)/app/$(APP_NAME)
+	CGO_ENABLED=0 GOOS=windows GOARCH=$(GOARCH) go build $(RACE) $(BUILDFLAGS) -ldflags "$(GO_BUILDINFO)" -tags "$(EXTRA_GO_BUILD_TAGS)" -o bin/$(APP_NAME)-windows-$(GOARCH)$(RACE).exe $(PKG_PREFIX)/app/$(APP_NAME)
 
 quicktemplate-gen: install-qtc
 	qtc -dir=lib
