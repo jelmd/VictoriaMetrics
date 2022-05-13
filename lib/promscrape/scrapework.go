@@ -34,9 +34,10 @@ import (
 var (
 	suppressScrapeErrors = flag.Bool("promscrape.suppressScrapeErrors", false, "Whether to suppress scrape errors logging. "+
 		"The last error for each target is always available at '/targets' page even if scrape errors logging is suppressed. "+
-		"See also -promscrape.suppressScrapeErrorsDelay")
-	suppressScrapeErrorsDelay = flag.Duration("promscrape.suppressScrapeErrorsDelay", 0, "The delay for suppressing repeated scrape errors logging per each scrape targets. "+
-		"This may be used for reducing the number of log lines related to scrape errors. See also -promscrape.suppressScrapeErrors")
+		"See also -promscrape.suppressScrapeErrorsDelay.")
+	suppressScrapeErrorsDelay = flag.Duration("promscrape.uppressScrapeErrorsDelay", 600, "Time in seconds to just collect/aggregate scrape errors before reporting them. "+
+		"If <= 0, report immediately, which may result in huge logs. "+
+		"See also -promscrape.suppressScrapeErrors.")
 	seriesLimitPerTarget          = flag.Int("promscrape.seriesLimitPerTarget", 0, "Optional limit on the number of unique time series a single scrape target can expose. See https://docs.victoriametrics.com/vmagent.html#cardinality-limiter for more info")
 	minResponseSizeForStreamParse = flagutil.NewBytes("promscrape.minResponseSizeForStreamParse", 1e6, "The minimum target response size for automatic switching to stream parsing mode, which can reduce memory usage. See https://docs.victoriametrics.com/vmagent.html#stream-parsing-mode")
 )
@@ -269,6 +270,9 @@ func (sw *scrapeWork) run(stopCh <-chan struct{}, globalStopCh <-chan struct{}) 
 	if scrapeOffset > 0 {
 		scrapeAlignInterval = scrapeInterval
 	}
+	if *suppressScrapeErrorsDelay < 1 {
+		*suppressScrapeErrorsDelay = 0
+	}
 	if scrapeAlignInterval <= 0 {
 		// Calculate start time for the first scrape from ScrapeURL and labels.
 		// This should spread load when scraping many targets with different
@@ -373,8 +377,14 @@ func (sw *scrapeWork) scrapeAndLogError(scrapeTimestamp, realTimestamp int64) {
 		return
 	}
 	totalRequests := sw.failureRequestsCount + sw.successRequestsCount
-	logger.Warnf("cannot scrape target %q (%s) %d out of %d times during -promscrape.suppressScrapeErrorsDelay=%s; the last error: %s",
-		sw.Config.ScrapeURL, sw.Config.Labels.String(), sw.failureRequestsCount, totalRequests, *suppressScrapeErrorsDelay, err)
+	// scrape interval isn't necessarily aligned or a multiple of suppressScrapeErrorsDelay - diffrence
+	// could be mor or less significant. So prefer to report the exact "error sample time" to avoid confusion.
+	t := (realTimestamp - sw.nextErrorLogTime + (*suppressScrapeErrorsDelay).Milliseconds() + 500)/1000
+	if (sw.successRequestsCount == 0) {
+		logger.Errorf("Scraping target %q (%s) failed %d/%d times within the last %ds). Last error: %s", sw.Config.ScrapeURL, sw.Config.Labels.String(), sw.failureRequestsCount, totalRequests, t, err)
+	} else {
+		logger.Warnf("Scraping target %q (%s) failed %d/%d times within the last %ds). Last error: %s", sw.Config.ScrapeURL, sw.Config.Labels.String(), sw.failureRequestsCount, totalRequests, t, err)
+	}
 	sw.nextErrorLogTime = realTimestamp + suppressScrapeErrorsDelay.Milliseconds()
 	sw.failureRequestsCount = 0
 	sw.successRequestsCount = 0
