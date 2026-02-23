@@ -4,7 +4,7 @@ COMMENT =		fast, cost-effective and scalable time series database
 
 GH_ACCOUNT =		VictoriaMetrics
 GH_PROJECT =		VictoriaMetrics
-GH_TAGNAME =		v1.59.0
+GH_TAGNAME =		v1.136.0
 
 CATEGORIES =		databases
 
