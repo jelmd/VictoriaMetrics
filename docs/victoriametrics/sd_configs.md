@@ -1969,12 +1969,24 @@ scrape_configs:
   # relabel_configs:
   # - <relabel_config> ...
 
+  # relabel_debug Decides whether to log metrics before and after relabeling with the relabel_configs of the related job.
+  # Related metrics aren't sent to storage. This is useful for debugging the relabeling configs.
+  # NOTE: Because it produces a lot of data if enabled, this option should not be used in production!
+  # See also https://docs.victoriametrics.com/vmagent.html#relabeling
+  # relabel_debug: <boolean>
+
   # metric_relabel_configs is an optional relabeling configs
   # for the collected metrics from active scrape targets.
   # See https://docs.victoriametrics.com/victoriametrics/relabeling/
   #
   # metric_relabel_configs:
   # - <relabel_config> ...
+
+  # metric_relabel_debug Decides whether to log metrics before and after relabeling with the metric_relabel_configs of
+  # the related job. Related metrics aren't sent to storage. This is useful for debugging the relabeling configs.
+  # NOTE: Because it produces a lot of data if enabled, this option should not be used in production!
+  # See also https://docs.victoriametrics.com/vmagent.html#relabeling
+  # metric_relabel_debug: <boolean>
 
   # sample_limit is an optional per-scrape limit on number
   # of scraped samples that will be accepted.

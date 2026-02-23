@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/bytesutil"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/fasttime"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/prompb"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/promutil"
@@ -108,17 +109,48 @@ func (pcs *ParsedConfigs) ApplyDebug(labels []prompb.Label) ([]prompb.Label, []D
 //
 // This function may add additional labels after the len(labels), so make sure it doesn't corrupt in-use labels
 // stored between len(labels) and cap(labels).
-func (pcs *ParsedConfigs) Apply(labels []prompb.Label, labelsOffset int) []prompb.Label {
+func (pcs *ParsedConfigs) Apply(labels []prompb.Label, labelsOffset int, value float64) []prompb.Label {
+	var inStr, outStr, ts string
+	relabelDebug := false
 	if pcs != nil {
+		relabelDebug = pcs.relabelDebug
+		if relabelDebug {
+			inStr = LabelsToString(labels[labelsOffset:])
+			t := fasttime.UnixTimestamp() % (24 * 3600)
+			h := t / 3600
+			t -= h * 3600
+			m := t / 60
+			t -= m * 60
+			ts = fmt.Sprintf("%02d:%02d:%02d", h, m, t)
+		}
 		for _, prc := range pcs.prcs {
 			labels = prc.apply(labels, labelsOffset)
 			if len(labels) == labelsOffset {
 				// All the labels have been removed.
+				if relabelDebug {
+					logger.Infof("\nRelabel  In %s: %s %f\nRelabel Out %s: DROPPED - all labels removed", ts, inStr, value, ts)
+				}
 				return labels
 			}
 		}
 	}
+	if relabelDebug {
+		outStr = LabelsToString(labels[labelsOffset:])
+	}
 	labels = removeEmptyLabels(labels, labelsOffset)
+	if relabelDebug {
+		if len(labels) == labelsOffset {
+			logger.Infof("\nRelabel  In %s: %s %f\nRelabeled to DROP %s: %s", ts, inStr, value, ts, outStr)
+			return labels
+		} else if inStr == outStr {
+			logger.Infof("\nRelabel  In %s: %s %f\nRelabel Out %s: KEPT AS IS - no change", ts, inStr, value, ts)
+		} else {
+			logger.Infof("\nRelabel  In %s: %s %f\nRelabel Out %s: %s %f", ts, inStr, value, ts, outStr, value)
+		}
+		// if returned list has the same length as before addRow() drops the metric.
+		// So lets drop it because debug is enabled.
+		labels = labels[:labelsOffset]
+	}
 	return labels
 }
 

@@ -80,7 +80,7 @@ func TestRelabelConfigMarshalUnmarshal(t *testing.T) {
 
 func TestLoadRelabelConfigsSuccess(t *testing.T) {
 	path := "testdata/relabel_configs_valid.yml"
-	pcs, _, err := LoadRelabelConfigs(path)
+	pcs, _, err := LoadRelabelConfigs(path, false)
 	if err != nil {
 		t.Fatalf("cannot load relabel configs from %q: %s", path, err)
 	}
@@ -93,7 +93,7 @@ func TestLoadRelabelConfigsSuccess(t *testing.T) {
 func TestLoadRelabelConfigsFailure(t *testing.T) {
 	f := func(path string) {
 		t.Helper()
-		rcs, _, err := LoadRelabelConfigs(path)
+		rcs, _, err := LoadRelabelConfigs(path, false)
 		if err == nil {
 			t.Fatalf("expecting non-nil error")
 		}
@@ -112,7 +112,7 @@ func TestLoadRelabelConfigsFailure(t *testing.T) {
 func TestParsedConfigsString(t *testing.T) {
 	f := func(rcs []RelabelConfig, sExpected string) {
 		t.Helper()
-		pcs, err := ParseRelabelConfigs(rcs)
+		pcs, err := ParseRelabelConfigs(rcs, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
@@ -159,7 +159,7 @@ func TestParsedConfigsString(t *testing.T) {
 func TestParseRelabelConfigsSuccess(t *testing.T) {
 	f := func(rcs []RelabelConfig, pcsExpected *ParsedConfigs) {
 		t.Helper()
-		pcs, err := ParseRelabelConfigs(rcs)
+		pcs, err := ParseRelabelConfigs(rcs, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
@@ -201,7 +201,7 @@ func TestParseRelabelConfigsSuccess(t *testing.T) {
 func TestParseRelabelConfigsFailure(t *testing.T) {
 	f := func(rcs []RelabelConfig) {
 		t.Helper()
-		pcs, err := ParseRelabelConfigs(rcs)
+		pcs, err := ParseRelabelConfigs(rcs, false)
 		if err == nil {
 			t.Fatalf("expecting non-nil error")
 		}

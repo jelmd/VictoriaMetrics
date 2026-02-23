@@ -62,7 +62,7 @@ func TestGetLabelsHash_Distribution(t *testing.T) {
 func TestRemoteWriteContext_TryPushTimeSeries(t *testing.T) {
 	f := func(streamAggrConfig, relabelConfig string, enableWindows bool, dedupInterval time.Duration, keepInput, dropInput bool, input string, expectedRowsPushedAfterRelabel, expectedPushedSample int) {
 		t.Helper()
-		perURLRelabel, err := promrelabel.ParseRelabelConfigsData([]byte(relabelConfig))
+		perURLRelabel, err := promrelabel.ParseRelabelConfigsData([]byte(relabelConfig), false)
 		if err != nil {
 			t.Fatalf("cannot load relabel configs: %s", err)
 		}

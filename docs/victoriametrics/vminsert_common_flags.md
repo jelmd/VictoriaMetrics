@@ -228,6 +228,8 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/cluster-victori
      Optional path to a file with relabeling rules, which are applied to all the ingested metrics. The path can point either to local file or to http url. See https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#relabeling for details. The config is reloaded on SIGHUP signal
   -relabelConfigCheckInterval duration
      Interval for checking for changes in '-relabelConfig' file. By default the checking is disabled. Send SIGHUP signal in order to force config check for changes
+  -relabelDebug bool
+	 Whether to log metrics before and after relabeling with -relabelConfig. Related metrics aren't sent to storage. This is useful for debugging the relabeling configs.
   -replicationFactor int
      Replication factor for the ingested data, i.e. how many copies to make among distinct -storageNode instances. Note that vmselect must run with -dedup.minScrapeInterval=1ms for data de-duplication when replicationFactor is greater than 1. Higher values for -dedup.minScrapeInterval at vmselect is OK (default 1)
   -rpc.disableCompression

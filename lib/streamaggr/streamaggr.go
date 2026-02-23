@@ -535,11 +535,11 @@ func newAggregator(cfg *Config, path string, pushFunc PushFunc, ms *metrics.Set,
 	}
 
 	// initialize input_relabel_configs and output_relabel_configs
-	inputRelabeling, err := promrelabel.ParseRelabelConfigs(cfg.InputRelabelConfigs)
+	inputRelabeling, err := promrelabel.ParseRelabelConfigs(cfg.InputRelabelConfigs, false)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse input_relabel_configs: %w", err)
 	}
-	outputRelabeling, err := promrelabel.ParseRelabelConfigs(cfg.OutputRelabelConfigs)
+	outputRelabeling, err := promrelabel.ParseRelabelConfigs(cfg.OutputRelabelConfigs, false)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse output_relabel_configs: %w", err)
 	}
@@ -992,7 +992,7 @@ func (a *aggregator) Push(tss []prompb.TimeSeries, matchIdxs []uint32) {
 		} else {
 			labels.Labels = append(labels.Labels[:0], ts.Labels...)
 		}
-		labels.Labels = a.inputRelabeling.Apply(labels.Labels, 0)
+		labels.Labels = a.inputRelabeling.Apply(labels.Labels, 0, 0)
 		if len(labels.Labels) == 0 {
 			// The metric has been deleted by the relabeling
 			continue
@@ -1223,7 +1223,7 @@ func (ctx *flushCtx) flushSeries() {
 	for _, ts := range tss {
 		dstLabelsLen := len(dstLabels)
 		dstLabels = append(dstLabels, ts.Labels...)
-		dstLabels = outputRelabeling.Apply(dstLabels, dstLabelsLen)
+		dstLabels = outputRelabeling.Apply(dstLabels, dstLabelsLen, 0)
 		if len(dstLabels) == dstLabelsLen {
 			// The metric has been deleted by the relabeling
 			continue

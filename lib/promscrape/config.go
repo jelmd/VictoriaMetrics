@@ -326,6 +326,8 @@ type ScrapeConfig struct {
 	YandexCloudSDConfigs  []yandexcloud.SDConfig  `yaml:"yandexcloud_sd_configs,omitempty"`
 
 	// These options are supported only by lib/promscrape.
+	RelabelDebug        bool                       `yaml:"relabel_debug,omitempty"`
+	MetricRelabelDebug  bool                       `yaml:"metric_relabel_debug,omitempty"`
 	DisableCompression  bool                       `yaml:"disable_compression,omitempty"`
 	DisableKeepAlive    bool                       `yaml:"disable_keepalive,omitempty"`
 	StreamParse         bool                       `yaml:"stream_parse,omitempty"`
@@ -942,7 +944,7 @@ func getScrapeWorkConfig(sc *ScrapeConfig, baseDir string, globalCfg *GlobalConf
 		rcs = append(rcs, globalCfg.RelabelConfigs...)
 		rcs = append(rcs, sc.RelabelConfigs...)
 	}
-	relabelConfigs, err := promrelabel.ParseRelabelConfigs(rcs)
+	relabelConfigs, err := promrelabel.ParseRelabelConfigs(rcs, sc.RelabelDebug)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse `relabel_configs` for `job_name` %q: %w", jobName, err)
 	}
@@ -952,7 +954,7 @@ func getScrapeWorkConfig(sc *ScrapeConfig, baseDir string, globalCfg *GlobalConf
 		mrcs = append(mrcs, globalCfg.MetricRelabelConfigs...)
 		mrcs = append(mrcs, sc.MetricRelabelConfigs...)
 	}
-	metricRelabelConfigs, err := promrelabel.ParseRelabelConfigs(mrcs)
+	metricRelabelConfigs, err := promrelabel.ParseRelabelConfigs(mrcs, sc.MetricRelabelDebug)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse `metric_relabel_configs` for `job_name` %q: %w", jobName, err)
 	}
@@ -1179,7 +1181,7 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 	if !*dropOriginalLabels {
 		originalLabels = labels.Clone()
 	}
-	labels.Labels = swc.relabelConfigs.Apply(labels.Labels, 0)
+	labels.Labels = swc.relabelConfigs.Apply(labels.Labels, 0, 0)
 	// Remove labels starting from "__meta_" prefix according to https://www.robustperception.io/life-of-a-label/
 	labels.RemoveMetaLabels()
 

@@ -101,7 +101,7 @@ metrics, no matter where they come from (push-based or pull-based sources). It
 includes two phases:
 
 - `-remoteWrite.relabelConfig`: This is applied to all metrics before they are sent to any remote storage destination.
-  Config content is available at `http://vmagent-host:8429/remotewrite-relabel-config` endpoint {{% available_from "v1.129.0" %}}. 
+  Config content is available at `http://vmagent-host:8429/remotewrite-relabel-config` endpoint {{% available_from "v1.129.0" %}}.
 - `-remoteWrite.urlRelabelConfig`: This is applied to all metrics before they are sent to a specific remote storage destination.
   Config content is available at `http://vmagent-host:8429/remotewrite-url-relabel-config` endpoint {{% available_from "v1.129.0" %}}.
 
@@ -1120,7 +1120,32 @@ section instead of `relabel_configs` section. They serve different purposes:
   relabeling is available on the `http://vmagent:8429/targets` page for
   `vmagent` and on the `http://victoriametrics:8428/targets` page for
   single-node VictoriaMetrics.
-
+- If the above isn’t enough, use vmagent flags `-remoteWrite.relabelDebug` or
+  `-remoteWrite.urlRelabelDebug` to debug metrics relabeled via `-remoteWrite.relabelConfig` or
+  `-remoteWrite.urlRelabelConfig`. To debug metrics relabeled via `scrape_configs:relabel_configs` or
+  `scrape_configs:metric_relabel_configs`, set `scrape_configs:relabel_debug` or
+  `scrape_configs:metric_relabel_debug` to `true`.
+  **Note**: This produces a lot of log output quickly and should **not** be used **in production** - only for short tests.
+  You can extract the final metrics sent to the target using a script like this:
+```nawk
+# Usage: nawk -f this_script log_file
+BEGIN { OLD="" }
+/Relabel  In / {
+	if ( OLD != $3 ) {
+		system("cp /dev/null /tmp/metric.out")
+		OLD = $3
+	}
+	LAST=substr($0, 23)
+}
+/KEPT AS IS/ { print LAST ; next }
+/Relabel Out / {
+	if ($4 == "DROPPED")
+		next;
+	if ($4 != "KEPT")
+		LAST=substr($0, 23);
+	print LAST >>"/tmp/metric.out"
+}
+```
 ## Useful tips for metric relabeling
 
 - Metric relabeling can be debugged on the

@@ -93,12 +93,12 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(any) error) error {
 	if cfg.Timeout.Duration() == 0 {
 		cfg.Timeout = promutil.NewDuration(time.Second * 10)
 	}
-	rCfg, err := promrelabel.ParseRelabelConfigs(cfg.RelabelConfigs)
+	rCfg, err := promrelabel.ParseRelabelConfigs(cfg.RelabelConfigs, false)
 	if err != nil {
 		return fmt.Errorf("failed to parse relabeling config: %w", err)
 	}
 	cfg.parsedRelabelConfigs = rCfg
-	arCfg, err := promrelabel.ParseRelabelConfigs(cfg.AlertRelabelConfigs)
+	arCfg, err := promrelabel.ParseRelabelConfigs(cfg.AlertRelabelConfigs, false)
 	if err != nil {
 		return fmt.Errorf("failed to parse alert relabeling config: %w", err)
 	}
@@ -106,7 +106,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(any) error) error {
 
 	for _, s := range cfg.StaticConfigs {
 		if len(s.AlertRelabelConfigs) > 0 {
-			_, err := promrelabel.ParseRelabelConfigs(s.AlertRelabelConfigs)
+			_, err := promrelabel.ParseRelabelConfigs(s.AlertRelabelConfigs, false)
 			if err != nil {
 				return fmt.Errorf("failed to parse alert_relabel_configs in static_config: %w", err)
 			}
@@ -114,7 +114,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 	for _, s := range cfg.ConsulSDConfigs {
 		if len(s.AlertRelabelConfigs) > 0 {
-			_, err := promrelabel.ParseRelabelConfigs(s.AlertRelabelConfigs)
+			_, err := promrelabel.ParseRelabelConfigs(s.AlertRelabelConfigs, false)
 			if err != nil {
 				return fmt.Errorf("failed to parse alert_relabel_configs in consul_sd_config: %w", err)
 			}
@@ -122,7 +122,7 @@ func (cfg *Config) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 	for _, s := range cfg.DNSSDConfigs {
 		if len(s.AlertRelabelConfigs) > 0 {
-			_, err := promrelabel.ParseRelabelConfigs(s.AlertRelabelConfigs)
+			_, err := promrelabel.ParseRelabelConfigs(s.AlertRelabelConfigs, false)
 			if err != nil {
 				return fmt.Errorf("failed to parse alert_relabel_configs in dns_sd_config: %w", err)
 			}
@@ -166,7 +166,7 @@ func parseConfig(path string) (*Config, error) {
 
 func parseLabels(target string, metaLabels *promutil.Labels, cfg *Config) (string, *promutil.Labels, error) {
 	labels := mergeLabels(target, metaLabels, cfg)
-	labels.Labels = cfg.parsedRelabelConfigs.Apply(labels.Labels, 0)
+	labels.Labels = cfg.parsedRelabelConfigs.Apply(labels.Labels, 0, 0)
 	labels.RemoveMetaLabels()
 	labels.Sort()
 	// Remove references to already deleted labels, so GC could clean strings for label name and label value past len(labels).

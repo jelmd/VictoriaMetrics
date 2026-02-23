@@ -106,7 +106,7 @@ func (am *AlertManager) send(ctx context.Context, alerts []Alert, alertLabels []
 	for i, a := range alerts {
 		lbls := alertLabels[i]
 		if am.relabelConfigs != nil {
-			lbls = am.relabelConfigs.Apply(lbls, 0)
+			lbls = am.relabelConfigs.Apply(lbls, 0, 0)
 		}
 		if len(lbls) == 0 {
 			continue

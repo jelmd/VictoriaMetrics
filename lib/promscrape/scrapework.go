@@ -1132,7 +1132,7 @@ func (wc *writeRequestCtx) addRow(cfg *ScrapeWork, r *parser.Row, timestamp int6
 	targetLabels := cfg.Labels.GetLabels()
 	wc.labels = appendLabels(wc.labels, metric, r.Tags, targetLabels, cfg.HonorLabels)
 	if needRelabel {
-		wc.labels = cfg.MetricRelabelConfigs.Apply(wc.labels, labelsLen)
+		wc.labels = cfg.MetricRelabelConfigs.Apply(wc.labels, labelsLen, r.Value)
 	}
 	wc.labels = promrelabel.FinalizeLabels(wc.labels[:labelsLen], wc.labels[labelsLen:])
 	if len(wc.labels) == labelsLen {
