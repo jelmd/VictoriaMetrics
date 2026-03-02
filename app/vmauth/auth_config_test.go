@@ -277,6 +277,50 @@ users:
   metric_labels:
     not-prometheus-compatible: value
 `)
+	// placeholder in url_prefix
+	f(`
+users:
+- username: foo
+  password: bar
+  url_prefix: 'http://ahost/{{a_placeholder}}/foobar'
+`)
+	// placeholder in a header
+	f(`
+users:
+- username: foo
+  password: bar
+  headers:
+  - 'X-Foo: {{a_placeholder}}'
+  url_prefix: 'http://ahost'
+`)
+	// placeholder in url_prefix
+	f(`
+users:
+- username: foo
+  password: bar
+  url_prefix: 'http://ahost/{{a_placeholder}}/foobar'
+`)
+	// placeholder in a header in url_map
+	f(`
+users:
+- username: foo
+  password: bar
+  url_map:
+    - src_paths: ["/select/.*"]
+      headers:
+        - 'X-Foo: {{a_placeholder}}'
+      url_prefix: 'http://ahost'
+`)
+
+	// placeholder in a header in url_map
+	f(`
+users:
+- username: foo
+  password: bar
+  url_map:
+    - src_paths: ["/select/.*"]
+      url_prefix: 'http://ahost/{{a_placeholder}}/foobar'
+`)
 }
 
 func TestParseAuthConfigSuccess(t *testing.T) {
@@ -637,6 +681,31 @@ users:
 			URLPrefix: mustParseURL("http://aaa:343/bbb"),
 		},
 	}, nil)
+
+	// Multiple users with access logs enabled
+	f(`
+users:
+- username: foo
+  url_prefix: http://foo
+  access_log: {}
+- username: bar
+  url_prefix: https://bar/x/
+  access_log:
+    filters:
+      skip_status_codes: [404]
+`, map[string]*UserInfo{
+		getHTTPAuthBasicToken("foo", ""): {
+			Username:  "foo",
+			URLPrefix: mustParseURL("http://foo"),
+			AccessLog: &AccessLog{},
+		},
+		getHTTPAuthBasicToken("bar", ""): {
+			Username:  "bar",
+			URLPrefix: mustParseURL("https://bar/x/"),
+			AccessLog: &AccessLog{Filters: &AccessLogFilters{SkipStatusCodes: []int{404}}},
+		},
+	}, nil)
+
 }
 
 func TestParseAuthConfigPassesTLSVerificationConfig(t *testing.T) {

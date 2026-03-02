@@ -59,7 +59,7 @@ var (
 		"Returns non-zero exit code on parsing errors and emits these errors to stderr. "+
 		"See also -promscrape.config.strictParse command-line flag. "+
 		"Pass -loggerLevel=ERROR if you don't need to see info messages in the output.")
-	dropOriginalLabels = flag.Bool("promscrape.dropOriginalLabels", true, "Whether to drop original labels for scrape targets at /targets and /api/v1/targets pages. "+
+	dropOriginalLabels = flag.Bool("promscrape.dropOriginalLabels", false, "Whether to drop original labels for scrape targets at /targets and /api/v1/targets pages. "+
 		"This may be needed for reducing memory usage when original labels for big number of scrape targets occupy big amounts of memory. "+
 		"Note that this reduces debuggability for improper per-target relabeling configs")
 	clusterMembersCount = flag.Int("promscrape.cluster.membersCount", 1, "The number of members in a cluster of scrapers. "+
@@ -1177,9 +1177,9 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 	defer promutil.PutLabels(labels)
 
 	mergeLabels(labels, swc, target, extraLabels, metaLabels)
-	var originalLabels *promutil.Labels
+	var originalLabels *compressedLabels
 	if !*dropOriginalLabels {
-		originalLabels = labels.Clone()
+		originalLabels = newCompressedLabels(labels)
 	}
 	labels.Labels = swc.relabelConfigs.Apply(labels.Labels, 0, 0)
 	// Remove labels starting from "__meta_" prefix according to https://www.robustperception.io/life-of-a-label/
@@ -1187,7 +1187,6 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 
 	if labels.Len() == 0 {
 		// Drop target without labels.
-		originalLabels = sortOriginalLabelsIfNeeded(originalLabels)
 		droppedTargetsMap.Register(originalLabels, swc.relabelConfigs, targetDropReasonRelabeling, nil)
 		return nil, nil
 	}
@@ -1202,7 +1201,6 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 		memberNums := getClusterMemberNumsForScrapeWork(bytesutil.ToUnsafeString(bb.B), *clusterMembersCount, *clusterReplicationFactor)
 		scrapeWorkKeyBufPool.Put(bb)
 		if !slices.Contains(memberNums, clusterMemberID) {
-			originalLabels = sortOriginalLabelsIfNeeded(originalLabels)
 			droppedTargetsMap.Register(originalLabels, swc.relabelConfigs, targetDropReasonSharding, memberNums)
 			return nil, nil
 		}
@@ -1210,7 +1208,6 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 	scrapeURL, address := promrelabel.GetScrapeURL(labels, swc.params)
 	if scrapeURL == "" {
 		// Drop target without URL.
-		originalLabels = sortOriginalLabelsIfNeeded(originalLabels)
 		droppedTargetsMap.Register(originalLabels, swc.relabelConfigs, targetDropReasonMissingScrapeURL, nil)
 		return nil, nil
 	}
@@ -1303,7 +1300,6 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 	// Reduce memory usage by interning all the strings in labels.
 	labelsCopy.InternStrings()
 
-	originalLabels = sortOriginalLabelsIfNeeded(originalLabels)
 	sw := &ScrapeWork{
 		ScrapeURL:            scrapeURL,
 		ScrapeInterval:       scrapeInterval,
@@ -1334,16 +1330,6 @@ func (swc *scrapeWorkConfig) getScrapeWork(target string, extraLabels, metaLabel
 		jobNameOriginal: swc.jobName,
 	}
 	return sw, nil
-}
-
-func sortOriginalLabelsIfNeeded(originalLabels *promutil.Labels) *promutil.Labels {
-	if originalLabels == nil {
-		return nil
-	}
-	originalLabels.Sort()
-	// Reduce memory usage by interning all the strings in originalLabels.
-	originalLabels.InternStrings()
-	return originalLabels
 }
 
 func mergeLabels(dst *promutil.Labels, swc *scrapeWorkConfig, target string, extraLabels, metaLabels *promutil.Labels) {
