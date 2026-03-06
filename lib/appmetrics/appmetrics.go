@@ -52,6 +52,7 @@ var (
 )
 
 func writePrometheusMetrics(w io.Writer) {
+	start := time.Now().UnixNano()
 	metrics.WritePrometheus(w, true)
 	metrics.WriteFDMetrics(w)
 
@@ -78,4 +79,6 @@ func writePrometheusMetrics(w io.Writer) {
 		}
 		fmt.Fprintf(w, "flag{name=%q, value=%q, is_set=%q} 1\n", f.Name, value, isSet)
 	})
+	end := time.Now().UnixNano()
+	metrics.WriteGaugeFloat64(w, "vm_scrape_collector_duration_seconds{collector=\"prometheus\"}", float64(end - start) / 1e9)
 }
