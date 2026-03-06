@@ -34,7 +34,7 @@ all: \
 	vmctl-prod
 
 clean:
-	rm -rf bin/*
+	rm -rf bin/* app/vmagent/prometheusimport/vmagent-remotewrite-data
 
 publish: \
 	publish-victoria-metrics \

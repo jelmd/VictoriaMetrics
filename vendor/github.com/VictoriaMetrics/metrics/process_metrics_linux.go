@@ -257,12 +257,22 @@ func writeProcessMetrics(w io.Writer) {
 
 	utime := float64(p.Utime) / userHZ
 	stime := float64(p.Stime) / userHZ
+	cutime := float64(p.Cutime) / userHZ
+	cstime := float64(p.Cstime) / userHZ
 	WriteCounterFloat64(w, "process_system_cpu_seconds", stime)
 	WriteCounterFloat64(w, "process_total_cpu_seconds", utime+stime)
 	WriteCounterFloat64(w, "process_user_cpu_seconds", utime)
 	WriteCounterUint64(w, "process_major_pagefaults", uint64(p.Majflt))
 	WriteCounterUint64(w, "process_minor_pagefaults", uint64(p.Minflt))
-	WriteGaugeUint64(w, "process_num_threads", uint64(p.NumThreads))
+	WriteCounterFloat64(w, "process_children_user_cpu_seconds", cutime)
+	WriteCounterFloat64(w, "process_children_system_cpu_seconds", cstime)
+	WriteCounterFloat64(w, "process_children_total_cpu_seconds", cutime + cstime)
+	WriteCounterUint64(w, "process_children_minor_pagefaults", uint64(p.Cminflt))
+	WriteCounterUint64(w, "process_children_major_pagefaults", uint64(p.Cmajflt))
+
+	// For compatibility to libprom, only. Otherwise process_num_threads would
+	// be the right thing to use.
+	WriteGaugeUint64(w, "process_threads_total", uint64(p.NumThreads))
 	WriteGaugeUint64(w, "process_resident_memory_bytes", uint64(p.Rss)*pageSizeBytes)
 	WriteGaugeUint64(w, "process_start_time_seconds", uint64(startTimeSeconds))
 	WriteGaugeUint64(w, "process_virtual_memory_bytes", uint64(p.Vsize))
@@ -313,7 +323,7 @@ func writeIOMetrics(w io.Writer) {
 		}
 	}
 	WriteGaugeUint64(w, "process_io_read_bytes", uint64(rchar))
-	WriteGaugeUint64(w, "process_io_written_bytes", uint64(wchar))
+	WriteGaugeUint64(w, "process_io_write_bytes", uint64(wchar))
 	WriteGaugeUint64(w, "process_io_read_syscalls", uint64(syscr))
 	WriteGaugeUint64(w, "process_io_write_syscalls", uint64(syscw))
 	WriteGaugeUint64(w, "process_io_read_storage_bytes", uint64(readBytes))

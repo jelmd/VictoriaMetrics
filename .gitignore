@@ -3,6 +3,7 @@
 /pkg
 *.pprof
 /bin
+/app/vmagent/prometheusimport/vmagent-remotewrite-data/
 .idea
 .vscode
 *.test
